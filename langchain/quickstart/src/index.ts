@@ -24,7 +24,7 @@ const agent = createAgent({
   systemPrompt: SYSTEM_PROMPT,
 });
 
-// v1.3+ 推荐使用 streamEvents v3 的 typed projections，而不是手动解析 streamMode tuple。
+// LangChain v1 推荐使用 streamEvents v3 的 typed projections，而不是手动解析 streamMode tuple。
 const stream = await agent.streamEvents(
   { messages: [{ role: "user", content: PROMPT }] },
   { version: "v3" },

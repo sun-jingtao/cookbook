@@ -55,20 +55,3 @@ export const readFile = tool(
 );
 
 export const tools = [listFiles, readFile];
-
-/** 把消息内容（可能是字符串或内容块数组）抽取为可打印的纯文本。 */
-export function toText(content: unknown): string {
-  if (typeof content === "string") return content;
-  if (Array.isArray(content)) {
-    return content
-      .map((block) =>
-        typeof block === "string"
-          ? block
-          : block && typeof block === "object" && (block as { type?: string }).type === "text"
-            ? ((block as { text?: string }).text ?? "")
-            : "",
-      )
-      .join("");
-  }
-  return "";
-}
