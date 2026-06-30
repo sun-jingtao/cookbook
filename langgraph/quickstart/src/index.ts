@@ -1,6 +1,12 @@
 import { ChatAnthropic } from "@langchain/anthropic";
-import { isAIMessage } from "@langchain/core/messages";
-import { createReactAgent } from "@langchain/langgraph/prebuilt";
+import { AIMessage, AIMessageChunk } from "@langchain/core/messages";
+import {
+  END,
+  MessagesAnnotation,
+  START,
+  StateGraph,
+} from "@langchain/langgraph";
+import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { tools, toText } from "./tools.js";
 
 const SYSTEM_PROMPT = [
@@ -17,23 +23,41 @@ const model = new ChatAnthropic({
   model: "claude-sonnet-4-6",
   temperature: 0,
 });
+const modelWithTools = model.bindTools(tools);
 
-// LangGraph 版：把整个「思考 → 调工具 → 再思考」的循环交给预构建的 ReAct 图。
-const agent = createReactAgent({
-  llm: model,
-  tools,
-  prompt: SYSTEM_PROMPT,
-});
+// LangGraph v1 版：显式搭建「模型节点 → 工具节点 → 模型节点」的循环图。
+async function llmCall(state: typeof MessagesAnnotation.State) {
+  const response = await modelWithTools.invoke([
+    { role: "system", content: SYSTEM_PROMPT },
+    ...state.messages,
+  ]);
+  return { messages: [response] };
+}
+
+function shouldContinue(state: typeof MessagesAnnotation.State) {
+  const lastMessage = state.messages.at(-1);
+
+  if (!lastMessage || !AIMessage.isInstance(lastMessage)) return END;
+  return lastMessage.tool_calls?.length ? "tools" : END;
+}
+
+const graph = new StateGraph(MessagesAnnotation)
+  .addNode("llmCall", llmCall)
+  .addNode("tools", new ToolNode(tools))
+  .addEdge(START, "llmCall")
+  .addConditionalEdges("llmCall", shouldContinue, ["tools", END])
+  .addEdge("tools", "llmCall")
+  .compile();
 
 // streamMode: "messages" 会逐 token 产出 [messageChunk, metadata]。
-const stream = await agent.stream(
+const stream = await graph.stream(
   { messages: [{ role: "user", content: PROMPT }] },
   { streamMode: "messages" },
 );
 
 for await (const [chunk] of stream) {
   // 只打印模型产出的助手文本，跳过工具调用块与工具返回消息。
-  if (!isAIMessage(chunk)) continue;
+  if (!AIMessageChunk.isInstance(chunk)) continue;
   const text = toText(chunk.content);
   if (text) process.stdout.write(text);
 }

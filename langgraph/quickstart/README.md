@@ -8,12 +8,14 @@
 
 | Cursor SDK Quickstart | 本项目（LangGraph） |
 | --- | --- |
-| `Agent.create({ local: { cwd } })` 自带文件/命令工具 | `createReactAgent({ llm, tools })` + 自定义只读文件工具 |
+| `Agent.create({ local: { cwd } })` 自带文件/命令工具 | `StateGraph` + `ToolNode` + 自定义只读文件工具 |
 | `model: { id: 'composer-2.5' }` | `ChatAnthropic({ model: 'claude-sonnet-4-6' })` |
-| `run.stream()` 取 `assistant` 文本块 | `agent.stream(..., { streamMode: 'messages' })` 取 AI token |
+| `run.stream()` 取 `assistant` 文本块 | `graph.stream(..., { streamMode: 'messages' })` 取 AI token |
 | `run.wait()` | `for await` 流结束即等价于运行结束 |
 
-整个「思考 → 调工具 → 再思考」的 Agent 循环由 LangGraph 预构建的 ReAct 图托管，这是与 [LangChain 版](../../langchain/quickstart) 的核心差异（后者手写循环）。
+这里不再使用已弃用的 `createReactAgent`，而是按 LangGraph v1 文档显式搭建
+「模型节点 → 工具节点 → 模型节点」的循环图。这是与 [LangChain 版](../../langchain/quickstart)
+的核心差异：LangChain 版使用更高层的 `createAgent` harness。
 
 ## 快速开始
 
@@ -37,7 +39,7 @@ ANTHROPIC_API_KEY="sk-ant-..." \
 ## 文件说明
 
 - `src/tools.ts` — 两个只读工具 `list_files` / `read_file`，限制在启动目录内，复刻 coding agent 的「读项目」能力。
-- `src/index.ts` — 创建 ReAct Agent 并以 `streamMode: "messages"` 流式输出助手 token。
+- `src/index.ts` — 创建 `StateGraph`，用 `ToolNode` 和条件边编排工具调用循环，并以 `streamMode: "messages"` 流式输出助手 token。
 
 ## 说明
 

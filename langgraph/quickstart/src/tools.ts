@@ -1,4 +1,4 @@
-import { tool, type StructuredToolInterface } from "@langchain/core/tools";
+import { tool } from "langchain";
 import * as z from "zod";
 import { promises as fs } from "node:fs";
 import path from "node:path";
@@ -54,10 +54,7 @@ export const readFile = tool(
   },
 );
 
-export const tools: StructuredToolInterface[] = [listFiles, readFile];
-export const toolsByName: Record<string, StructuredToolInterface> = Object.fromEntries(
-  tools.map((t) => [t.name, t]),
-);
+export const tools = [listFiles, readFile];
 
 /** 把消息内容（可能是字符串或内容块数组）抽取为可打印的纯文本。 */
 export function toText(content: unknown): string {

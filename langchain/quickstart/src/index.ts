@@ -1,12 +1,6 @@
+import { createAgent } from "langchain";
 import { ChatAnthropic } from "@langchain/anthropic";
-import {
-  AIMessageChunk,
-  HumanMessage,
-  SystemMessage,
-  ToolMessage,
-  type BaseMessage,
-} from "@langchain/core/messages";
-import { tools, toolsByName, toText } from "./tools.js";
+import { tools } from "./tools.js";
 
 const SYSTEM_PROMPT = [
   "你是一个本地代码库助手，工作目录就是当前项目根目录。",
@@ -22,33 +16,23 @@ const model = new ChatAnthropic({
   model: "claude-sonnet-4-6",
   temperature: 0,
 });
-const modelWithTools = model.bindTools(tools);
 
-// LangChain 版：不依赖 LangGraph，手写「思考 → 调工具 → 再思考」的循环，
-// 直观展示一个 tool-calling agent 的内部机制。
-const messages: BaseMessage[] = [new SystemMessage(SYSTEM_PROMPT), new HumanMessage(PROMPT)];
+// LangChain v1 版：使用 createAgent 这个标准 Agent harness。
+const agent = createAgent({
+  model,
+  tools,
+  systemPrompt: SYSTEM_PROMPT,
+});
 
-while (true) {
-  // 逐 token 流式输出本轮助手文本，同时把所有分片拼回一条完整的 AIMessage。
-  let gathered: AIMessageChunk | undefined;
-  for await (const chunk of await modelWithTools.stream(messages)) {
-    gathered = gathered ? gathered.concat(chunk) : chunk;
-    const text = toText(chunk.content);
-    if (text) process.stdout.write(text);
-  }
-  if (!gathered) break;
-  messages.push(gathered);
+// v1.3+ 推荐使用 streamEvents v3 的 typed projections，而不是手动解析 streamMode tuple。
+const stream = await agent.streamEvents(
+  { messages: [{ role: "user", content: PROMPT }] },
+  { version: "v3" },
+);
 
-  const toolCalls = gathered.tool_calls ?? [];
-  if (toolCalls.length === 0) break; // 没有工具调用 = 已给出最终答案
-
-  // 执行模型请求的每个工具，把结果作为 ToolMessage 回灌，进入下一轮。
-  for (const call of toolCalls) {
-    const selected = toolsByName[call.name];
-    const result = selected
-      ? await selected.invoke(call.args)
-      : `未知工具：${call.name}`;
-    messages.push(new ToolMessage({ content: String(result), tool_call_id: call.id ?? "" }));
+for await (const message of stream.messages) {
+  for await (const token of message.text) {
+    process.stdout.write(token);
   }
 }
 
