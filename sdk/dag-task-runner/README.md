@@ -52,7 +52,7 @@ CURSOR_API_KEY="crsr_..." \
   dev -- --dag examples/example_dag.json --canvas-path "$PWD/dag-example.canvas.tsx" --cwd "$PWD"
 ```
 
-Watch [`dag-example.canvas.tsx`](./examples/example_dag.json) refresh as each rank moves through:
+Watch `dag-example.canvas.tsx` refresh as each rank moves through:
 
 ```
 [dag-runner] DAG "Build a tiny CLI todo app" — 6 tasks across 4 rank(s)
