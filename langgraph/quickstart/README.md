@@ -1,6 +1,6 @@
 # LangGraph 版 Quickstart（复刻 Cursor SDK Quickstart）
 
-用 [LangGraph.js](https://langchain-ai.github.io/langgraphjs/) 复刻 [`sdk/quickstart`](../sdk/quickstart)（Cursor SDK Quickstart）的行为：
+用 [LangGraph.js](https://langchain-ai.github.io/langgraphjs/) 复刻 [`sdk/quickstart`](../../sdk/quickstart)（Cursor SDK Quickstart）的行为：
 创建一个能访问本地文件系统的 Agent，发送一条硬编码 prompt「用一段话解释这个项目。」，
 让 Agent **实际读取当前目录的文件**来理解项目，并把助手文本**流式**打印到 stdout。
 
@@ -13,7 +13,7 @@
 | `run.stream()` 取 `assistant` 文本块 | `agent.stream(..., { streamMode: 'messages' })` 取 AI token |
 | `run.wait()` | `for await` 流结束即等价于运行结束 |
 
-整个「思考 → 调工具 → 再思考」的 Agent 循环由 LangGraph 预构建的 ReAct 图托管，这是与 [LangChain 版](../langchain-quickstart) 的核心差异（后者手写循环）。
+整个「思考 → 调工具 → 再思考」的 Agent 循环由 LangGraph 预构建的 ReAct 图托管，这是与 [LangChain 版](../../langchain/quickstart) 的核心差异（后者手写循环）。
 
 ## 快速开始
 
@@ -21,7 +21,7 @@
 
 ```bash
 pnpm install
-export ANTHROPIC_API_KEY="sk-ant-..."   # 或 cp .env.example .env 后改值
+cp .env.example .env   # 将 ANTHROPIC_API_KEY 改成你的 Anthropic API Key
 pnpm dev
 ```
 
@@ -30,11 +30,9 @@ pnpm dev
 ```bash
 cd /path/to/some/project
 ANTHROPIC_API_KEY="sk-ant-..." \
-  pnpm --dir /Users/luoluo/Desktop/my-github/cookbook/langgraph-quickstart dev
+  /Users/luoluo/Desktop/my-github/cookbook/langgraph/quickstart/node_modules/.bin/tsx \
+  /Users/luoluo/Desktop/my-github/cookbook/langgraph/quickstart/src/index.ts
 ```
-
-> 注：`tsx src/index.ts` 不会自动加载 `.env`。若用 `.env` 文件，请改用
-> `tsx --env-file=.env src/index.ts`，或直接 `export ANTHROPIC_API_KEY`。
 
 ## 文件说明
 
