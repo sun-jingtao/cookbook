@@ -23,8 +23,11 @@
 
 ```bash
 pnpm install
-export ANTHROPIC_API_KEY="sk-ant-..."   # 或 cp .env.example .env 后改值
+cp .env.example .env   # 填写 OPENAI_API_KEY / OPENAI_BASE_URL；必要时调整 OPENAI_MODEL
 ```
+
+> 模型走 OpenAI-compatible 中转站：`ChatOpenAI` + `configuration.baseURL`，配置从 `.env` 读取
+> （`dev` 脚本已带 `--env-file=.env`）。
 
 一次性提问（针对当前目录）：
 

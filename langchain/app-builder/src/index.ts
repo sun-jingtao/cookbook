@@ -3,7 +3,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { createAgent } from "langchain";
 import { MemorySaver } from "@langchain/langgraph";
-import { ChatAnthropic } from "@langchain/anthropic";
+import { ChatOpenAI } from "@langchain/openai";
 import { BUILD_DIR, tools } from "./tools.js";
 
 const SYSTEM_PROMPT = [
@@ -13,7 +13,26 @@ const SYSTEM_PROMPT = [
   "每次改动后用一两句话说明你做了什么。请用中文。",
 ].join("");
 
-const model = new ChatAnthropic({ model: "claude-sonnet-4-6", temperature: 0 });
+// 使用 OpenAI-compatible 中转站；key / baseURL / model 都从 .env 读取。
+const apiKey = process.env.OPENAI_API_KEY;
+if (!apiKey) {
+  throw new Error("缺少 OPENAI_API_KEY，请在 .env 中填写中转站 key。");
+}
+const rawBaseURL = process.env.OPENAI_BASE_URL;
+if (!rawBaseURL) {
+  throw new Error("缺少 OPENAI_BASE_URL，请在 .env 中填写 OpenAI-compatible 中转站地址。");
+}
+const baseURL = rawBaseURL.replace(/\/$/, "").endsWith("/v1")
+  ? rawBaseURL.replace(/\/$/, "")
+  : `${rawBaseURL.replace(/\/$/, "")}/v1`;
+const modelName = process.env.OPENAI_MODEL || "gpt-5.5";
+
+const model = new ChatOpenAI({
+  model: modelName,
+  apiKey,
+  configuration: { baseURL },
+  temperature: 0,
+});
 
 // 用 MemorySaver 让多轮迭代记住此前生成的应用上下文（“把按钮改成蓝色”能接上文）。
 const agent = createAgent({

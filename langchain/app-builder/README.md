@@ -23,7 +23,7 @@
 
 ```bash
 pnpm install
-export ANTHROPIC_API_KEY="sk-ant-..."   # 或 cp .env.example .env 后改值
+cp .env.example .env   # 填写 OPENAI_API_KEY / OPENAI_BASE_URL；必要时调整 OPENAI_MODEL
 ```
 
 一次性生成：

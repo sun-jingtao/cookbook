@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { ChatAnthropic } from "@langchain/anthropic";
+import { ChatOpenAI } from "@langchain/openai";
 import {
   END,
   GraphNode,
@@ -15,12 +15,26 @@ import { type Complexity, type Task, computeRanks, parseDAG } from "./dag.js";
 const SYSTEM_PROMPT =
   "你是一个 DAG 流水线中的子任务执行器。只完成本子任务，输出简洁、可直接被下游任务消费。请用中文。";
 
-// 复刻原案例「complexity 驱动模型选型」的设计：把 HIGH/MED/LOW 对应到
-// Claude 的 opus / sonnet / haiku —— 越复杂的任务用越强的模型。
+// 使用 OpenAI-compatible 中转站；key / baseURL 从 .env 读取。
+const apiKey = process.env.OPENAI_API_KEY;
+if (!apiKey) {
+  throw new Error("缺少 OPENAI_API_KEY，请在 .env 中填写中转站 key。");
+}
+const rawBaseURL = process.env.OPENAI_BASE_URL;
+if (!rawBaseURL) {
+  throw new Error("缺少 OPENAI_BASE_URL，请在 .env 中填写 OpenAI-compatible 中转站地址。");
+}
+const baseURL = rawBaseURL.replace(/\/$/, "").endsWith("/v1")
+  ? rawBaseURL.replace(/\/$/, "")
+  : `${rawBaseURL.replace(/\/$/, "")}/v1`;
+
+// 复刻原案例「complexity 驱动模型选型」：三档可分别用 OPENAI_MODEL_HIGH/MED/LOW
+// 指定不同模型；都缺省时统一回退到 OPENAI_MODEL（单模型中转站只需设这一个）。
+const FALLBACK_MODEL = process.env.OPENAI_MODEL || "gpt-5.5";
 const MODEL_BY_COMPLEXITY: Record<Complexity, string> = {
-  HIGH: "claude-opus-4-8",
-  MED: "claude-sonnet-4-6",
-  LOW: "claude-haiku-4-5-20251001",
+  HIGH: process.env.OPENAI_MODEL_HIGH || FALLBACK_MODEL,
+  MED: process.env.OPENAI_MODEL_MED || FALLBACK_MODEL,
+  LOW: process.env.OPENAI_MODEL_LOW || FALLBACK_MODEL,
 };
 
 const UPSTREAM_CHAR_CAP = 2000;
@@ -52,7 +66,12 @@ function textOf(content: unknown): string {
 
 /** 把一个 DAG 任务包成一个图节点：拼接上游产物 → 调模型 → 写回自己的产物。 */
 function makeNode(task: Task): GraphNode<typeof State> {
-  const model = new ChatAnthropic({ model: MODEL_BY_COMPLEXITY[task.complexity], temperature: 0 });
+  const model = new ChatOpenAI({
+    model: MODEL_BY_COMPLEXITY[task.complexity],
+    apiKey,
+    configuration: { baseURL },
+    temperature: 0,
+  });
   return async (state) => {
     const upstream = task.depends_on
       .map((dep) => `## 上游产物：${dep}\n${(state.outputs[dep] ?? "").slice(0, UPSTREAM_CHAR_CAP)}`)

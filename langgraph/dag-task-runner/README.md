@@ -12,8 +12,8 @@
 | Cursor SDK dag-task-runner | 本项目（LangGraph） |
 | --- | --- |
 | Kahn 拓扑分层 + `Promise.all` 手动并行 | 动态 `addNode`/`addEdge` 构图，LangGraph 自动并行无依赖节点 |
-| 每个子任务是一个 Cursor coding agent | 每个节点是一次 `ChatAnthropic` 调用（最小形态，无文件/shell 工具） |
-| `complexity` → Cursor 模型（gpt-5.3-codex 等） | `complexity` → Claude：HIGH→opus、MED→sonnet、LOW→haiku |
+| 每个子任务是一个 Cursor coding agent | 每个节点是一次 `ChatOpenAI` 调用（最小形态，无文件/shell 工具） |
+| `complexity` → Cursor 模型（gpt-5.3-codex 等） | `complexity` → 中转站模型：用 OPENAI_MODEL_HIGH/MED/LOW 分档，缺省回退 OPENAI_MODEL |
 | 上游输出拼进下游 prompt（前 2000 字符） | 同样：`ReducedValue` 状态里按 taskId 存产物，下游读取拼接 |
 | 实时写入 Cursor Canvas | `streamMode: "updates"` 把每个节点完成事件打印到终端 |
 | 并发安全 | `ReducedValue` 的 reducer 合并并行节点的并发写入 |
@@ -24,7 +24,7 @@
 
 ```bash
 pnpm install
-export ANTHROPIC_API_KEY="sk-ant-..."   # 或 cp .env.example .env 后改值
+cp .env.example .env   # 填写 OPENAI_API_KEY / OPENAI_BASE_URL；必要时调整 OPENAI_MODEL
 pnpm example
 ```
 
@@ -37,9 +37,9 @@ DAG "Design a tiny CLI todo app" — 6 个任务，共 4 层
   rank 3/4: implement
   rank 4/4: tests, docs
 
-  ✓ research-stack (claude-haiku-4-5-20251001) [1/6]
-  ✓ research-cli-conventions (claude-haiku-4-5-20251001) [2/6]
-  ✓ design (claude-sonnet-4-6) [3/6]
+  ✓ research-stack (<OPENAI_MODEL_LOW>) [1/6]
+  ✓ research-cli-conventions (<OPENAI_MODEL_LOW>) [2/6]
+  ✓ design (<OPENAI_MODEL_MED>) [3/6]
   ...
 完成 — 6/6 个任务，产物已写入 dag-output/
 ```

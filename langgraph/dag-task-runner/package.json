@@ -7,16 +7,16 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "tsx src/run_dag.ts",
-    "example": "tsx src/run_dag.ts examples/example_dag.json",
+    "dev": "tsx --env-file=.env src/run_dag.ts",
+    "example": "tsx --env-file=.env src/run_dag.ts examples/example_dag.json",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/run_dag.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@langchain/anthropic": "^1.5.1",
     "@langchain/core": "^1.2.1",
     "@langchain/langgraph": "^1.4.7",
+    "@langchain/openai": "^1.5.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {
