@@ -11,11 +11,8 @@ const SYSTEM_PROMPT = [
 
 const PROMPT = "用一段话解释这个项目。";
 const apiKey = process.env.OPENAI_API_KEY;
-const rawBaseURL = process.env.OPENAI_BASE_URL || "https://calciumion.nbops.com";
-const baseURL = rawBaseURL.replace(/\/$/, "").endsWith("/v1")
-  ? rawBaseURL.replace(/\/$/, "")
-  : `${rawBaseURL.replace(/\/$/, "")}/v1`;
-const modelName = process.env.OPENAI_MODEL || "gpt-5.5";
+const baseURL = process.env.OPENAI_BASE_URL!;
+const modelName = process.env.OPENAI_MODEL!;
 
 if (!apiKey) {
   throw new Error("缺少 OPENAI_API_KEY，请创建或编辑 .env 后填写中转站 key。");
