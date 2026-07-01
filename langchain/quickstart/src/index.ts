@@ -1,6 +1,7 @@
 import { createAgent } from "langchain";
-import { ChatAnthropic } from "@langchain/anthropic";
-import { tools } from "./tools.js";
+import { AIMessageChunk } from "@langchain/core/messages";
+import { ChatOpenAI } from "@langchain/openai";
+import { tools, toText } from "./tools.js";
 
 const SYSTEM_PROMPT = [
   "你是一个本地代码库助手，工作目录就是当前项目根目录。",
@@ -9,11 +10,24 @@ const SYSTEM_PROMPT = [
 ].join("");
 
 const PROMPT = "用一段话解释这个项目。";
+const apiKey = process.env.OPENAI_API_KEY;
+const rawBaseURL = process.env.OPENAI_BASE_URL || "https://calciumion.nbops.com";
+const baseURL = rawBaseURL.replace(/\/$/, "").endsWith("/v1")
+  ? rawBaseURL.replace(/\/$/, "")
+  : `${rawBaseURL.replace(/\/$/, "")}/v1`;
+const modelName = process.env.OPENAI_MODEL || "gpt-5.5";
 
-// 与 Cursor 的 composer-2.5 对应，这里用 Claude 作为推理模型。
-// ChatAnthropic 默认读取环境变量 ANTHROPIC_API_KEY。
-const model = new ChatAnthropic({
-  model: "claude-sonnet-4-6",
+if (!apiKey) {
+  throw new Error("缺少 OPENAI_API_KEY，请创建或编辑 .env 后填写中转站 key。");
+}
+
+// 使用 OpenAI-compatible 中转站；key/baseURL/model 都从 .env 读取。
+const model = new ChatOpenAI({
+  model: modelName,
+  apiKey,
+  configuration: {
+    baseURL,
+  },
   temperature: 0,
 });
 
@@ -24,16 +38,33 @@ const agent = createAgent({
   systemPrompt: SYSTEM_PROMPT,
 });
 
-// LangChain v1 推荐使用 streamEvents v3 的 typed projections，而不是手动解析 streamMode tuple。
-const stream = await agent.streamEvents(
+// 使用 streamMode: "messages" 逐 token 输出模型文本。
+const stream = await agent.stream(
   { messages: [{ role: "user", content: PROMPT }] },
-  { version: "v3" },
+  { streamMode: "messages" },
 );
 
-for await (const message of stream.messages) {
-  for await (const token of message.text) {
-    process.stdout.write(token);
+process.stderr.write(`正在请求模型 ${modelName}，baseURL=${baseURL}\n`);
+
+let wroteText = false;
+const timeout = setTimeout(() => {
+  process.stderr.write("\n请求超过 60 秒仍未收到文本输出，请检查中转站 baseURL、模型名、流式响应和 tool/function calling 支持。\n");
+  process.exit(1);
+}, 60_000);
+
+for await (const [chunk] of stream) {
+  if (!AIMessageChunk.isInstance(chunk)) continue;
+  const text = toText(chunk.content);
+  if (text) {
+    wroteText = true;
+    process.stdout.write(text);
   }
+}
+
+clearTimeout(timeout);
+
+if (!wroteText) {
+  process.stderr.write("\n未收到模型文本输出，请检查 OPENAI_MODEL 是否支持 tool/function calling，或中转站是否支持流式响应。\n");
 }
 
 process.stdout.write("\n");

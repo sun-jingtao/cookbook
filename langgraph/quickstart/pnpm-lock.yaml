@@ -8,18 +8,18 @@ importers:
 
   .:
     dependencies:
-      '@langchain/anthropic':
-        specifier: ^1.5.1
-        version: 1.5.1(@langchain/core@1.2.1)
       '@langchain/core':
         specifier: ^1.2.1
-        version: 1.2.1
+        version: 1.2.1(openai@6.45.0(zod@4.4.3))
       '@langchain/langgraph':
         specifier: ^1.4.7
-        version: 1.4.7(@langchain/core@1.2.1)(zod@4.4.3)
+        version: 1.4.7(@langchain/core@1.2.1(openai@6.45.0(zod@4.4.3)))(zod@4.4.3)
+      '@langchain/openai':
+        specifier: ^1.5.3
+        version: 1.5.3(@langchain/core@1.2.1(openai@6.45.0(zod@4.4.3)))
       langchain:
         specifier: ^1.5.2
-        version: 1.5.2(@langchain/core@1.2.1)
+        version: 1.5.2(@langchain/core@1.2.1(openai@6.45.0(zod@4.4.3)))(openai@6.45.0(zod@4.4.3))
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -35,19 +35,6 @@ importers:
         version: 6.0.3
 
 packages:
-
-  '@anthropic-ai/sdk@0.103.0':
-    resolution: {integrity: sha512-1uG7RNgoHTUxzOXqSCODKt0UTVlxWiHk/2Tt2/uQJiPW7XzBeKVuJyd3Aw6T3LPyvZV/jDTnPLX7SaM70WLLjA==}
-    hasBin: true
-    peerDependencies:
-      zod: ^3.25.0 || ^4.0.0
-    peerDependenciesMeta:
-      zod:
-        optional: true
-
-  '@babel/runtime@7.29.7':
-    resolution: {integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==}
-    engines: {node: '>=6.9.0'}
 
   '@cfworker/json-schema@4.1.1':
     resolution: {integrity: sha512-gAmrUZSGtKc3AiBL71iNWxDsyUC5uMaKKGdvzYsBoTW/xi42JQHl7eKV2OYzCUqvc+D2RCcf7EXY2iCyFIk6og==}
@@ -208,12 +195,6 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@langchain/anthropic@1.5.1':
-    resolution: {integrity: sha512-j92zCCd5BFH3rHMRzc2wBmSKDoVpinof1oh8aFiAz9TWbSOc4tGU4n6bqwy/wP0GH1uO96zZHLGCHBMPgrxTNw==}
-    engines: {node: '>=20'}
-    peerDependencies:
-      '@langchain/core': ^1.2.1
-
   '@langchain/core@1.2.1':
     resolution: {integrity: sha512-NNG/cC5FGuHDOAP56h0ddp8Rfk8p+othWzEK5RV9JIG6RvnF5vGa5r0AEGtKfQieed7s1kC42GuIzVOBvMBL/g==}
     engines: {node: '>=20'}
@@ -249,11 +230,14 @@ packages:
       '@langchain/core': ^1.1.48
       zod: ^3.25.32 || ^4.2.0
 
+  '@langchain/openai@1.5.3':
+    resolution: {integrity: sha512-OStS2AUvy9oe/hEf/3ndBOFztUDOfuJYLNXh89m3iiJAI2Cp5Dp0n/pvpO27MO0b+VgENd+xSHVyQZ7fe+ulxg==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      '@langchain/core': ^1.2.1
+
   '@langchain/protocol@0.0.18':
     resolution: {integrity: sha512-XW1egQtPfsGI41w2AMZNFZrUIwFSQHTjVMZs0OaTpCAvht/QLoaPN8FQcsysMVypOhupG28J29yOorrc70otBQ==}
-
-  '@stablelib/base64@1.0.1':
-    resolution: {integrity: sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ==}
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
@@ -278,9 +262,6 @@ packages:
   eventemitter3@5.0.4:
     resolution: {integrity: sha512-mlsTRyGaPBjPedk6Bvw+aqbsXDtoAyAzm5MO7JgU+yVRyMQ5O8bD4Kcci7BS85f93veegeCPkL8R4GLClnjLFw==}
 
-  fast-sha256@1.3.0:
-    resolution: {integrity: sha512-n11RGP/lrWEFI/bWdygLxhI+pVeo1ZYIVwvvPkW7azl/rOy+F3HYRZ2K5zeE9mmkhQppyv9sQFx0JM9UabnpPQ==}
-
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
@@ -292,10 +273,6 @@ packages:
 
   js-tiktoken@1.0.21:
     resolution: {integrity: sha512-biOj/6M5qdgx5TKjDnFT1ymSpM5tbd3ylwDtrQvFQSu0Z7bBYko2dF+W/aUkXUPuk6IVpRxk/3Q2sHOzGlS36g==}
-
-  json-schema-to-ts@3.1.1:
-    resolution: {integrity: sha512-+DWg8jCJG2TEnpy7kOm/7/AxaYoaRbjVB4LFZLySZlWn8exGs3A4OLJR966cVvU26N7X9TWxl+Jsw7dzAqKT6g==}
-    engines: {node: '>=16'}
 
   langchain@1.5.2:
     resolution: {integrity: sha512-5vCWYvzxuY7gJ8UCgSZ17SM45gou5PtRguFgeQIyCnHzGZQUFLHKi/eQArL3Ad98fJ/UiOEAaTXiI3jfIdoABg==}
@@ -327,6 +304,26 @@ packages:
     resolution: {integrity: sha512-71ippSywq5Yb7/tVYyGbkBggbU8H3u5Rz56fH60jGFgr8uHwxs+aSKeqmluIVzM0m0kB7xQjKS6qPfd0b2ZoqQ==}
     hasBin: true
 
+  openai@6.45.0:
+    resolution: {integrity: sha512-5DQVNErssk0afNpTTHUm/qZPU4iKR9OYdNid8Ib4puq4gHNNvGWZht2zY4h9a8JMF949Ik6m8gQutllVPbjdnw==}
+    peerDependencies:
+      '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
+      '@smithy/hash-node': '>=4.3.0 <5'
+      '@smithy/signature-v4': '>=5.4.0 <6'
+      ws: ^8.18.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      '@aws-sdk/credential-provider-node':
+        optional: true
+      '@smithy/hash-node':
+        optional: true
+      '@smithy/signature-v4':
+        optional: true
+      ws:
+        optional: true
+      zod:
+        optional: true
+
   p-finally@1.0.0:
     resolution: {integrity: sha512-LICb2p9CB7FS+0eR1oqWnHhp0FljGLZCWBE9aix0Uye9W8LTQPwMTYVGWQWIw9RdQiDg4+epXQODwIYJtSJaow==}
     engines: {node: '>=4'}
@@ -351,12 +348,6 @@ packages:
     resolution: {integrity: sha512-AxTM2wDGORHGEkPCt8yqxOTMgpfbEHqF51f/5fJCmwFC3C/zNcGT63SymH2ttOAaiIws2zVg4+izQCjrakcwHg==}
     engines: {node: '>=20'}
 
-  standardwebhooks@1.0.0:
-    resolution: {integrity: sha512-BbHGOQK9olHPMvQNHWul6MYlrRTAOKn03rOe4A8O3CLWhNf4YHBqq2HJKKC+sfqpxiBY52pNeesD6jIiLDz8jg==}
-
-  ts-algebra@2.0.0:
-    resolution: {integrity: sha512-FPAhNPFMrkwz76P7cdjdmiShwMynZYN6SgOujD1urY4oNm80Ou9oMdmbR45LotcKOXoy7wSmHkRFE6Mxbrhefw==}
-
   tsx@4.22.4:
     resolution: {integrity: sha512-X8EX+XV4QR5xCsrgxaED954zTDfY8KqlDtskKEL0cHhyS/P8b4IFOvGDQpsC9Q1XnLq915wEfwwY/zzskCtmhg==}
     engines: {node: '>=18.0.0'}
@@ -374,15 +365,6 @@ packages:
     resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
 
 snapshots:
-
-  '@anthropic-ai/sdk@0.103.0(zod@4.4.3)':
-    dependencies:
-      json-schema-to-ts: 3.1.1
-      standardwebhooks: 1.0.0
-    optionalDependencies:
-      zod: 4.4.3
-
-  '@babel/runtime@7.29.7': {}
 
   '@cfworker/json-schema@4.1.1': {}
 
@@ -464,18 +446,12 @@ snapshots:
   '@esbuild/win32-x64@0.28.1':
     optional: true
 
-  '@langchain/anthropic@1.5.1(@langchain/core@1.2.1)':
-    dependencies:
-      '@anthropic-ai/sdk': 0.103.0(zod@4.4.3)
-      '@langchain/core': 1.2.1
-      zod: 4.4.3
-
-  '@langchain/core@1.2.1':
+  '@langchain/core@1.2.1(openai@6.45.0(zod@4.4.3))':
     dependencies:
       '@cfworker/json-schema': 4.1.1
       '@standard-schema/spec': 1.1.0
       js-tiktoken: 1.0.21
-      langsmith: 0.7.13
+      langsmith: 0.7.13(openai@6.45.0(zod@4.4.3))
       mustache: 4.2.0
       p-queue: 6.6.2
       zod: 4.4.3
@@ -486,23 +462,23 @@ snapshots:
       - openai
       - ws
 
-  '@langchain/langgraph-checkpoint@1.1.3(@langchain/core@1.2.1)':
+  '@langchain/langgraph-checkpoint@1.1.3(@langchain/core@1.2.1(openai@6.45.0(zod@4.4.3)))':
     dependencies:
-      '@langchain/core': 1.2.1
+      '@langchain/core': 1.2.1(openai@6.45.0(zod@4.4.3))
 
-  '@langchain/langgraph-sdk@1.9.25(@langchain/core@1.2.1)':
+  '@langchain/langgraph-sdk@1.9.25(@langchain/core@1.2.1(openai@6.45.0(zod@4.4.3)))':
     dependencies:
-      '@langchain/core': 1.2.1
+      '@langchain/core': 1.2.1(openai@6.45.0(zod@4.4.3))
       '@langchain/protocol': 0.0.18
       '@types/json-schema': 7.0.15
       p-queue: 9.3.0
       p-retry: 7.1.1
 
-  '@langchain/langgraph@1.4.7(@langchain/core@1.2.1)(zod@4.4.3)':
+  '@langchain/langgraph@1.4.7(@langchain/core@1.2.1(openai@6.45.0(zod@4.4.3)))(zod@4.4.3)':
     dependencies:
-      '@langchain/core': 1.2.1
-      '@langchain/langgraph-checkpoint': 1.1.3(@langchain/core@1.2.1)
-      '@langchain/langgraph-sdk': 1.9.25(@langchain/core@1.2.1)
+      '@langchain/core': 1.2.1(openai@6.45.0(zod@4.4.3))
+      '@langchain/langgraph-checkpoint': 1.1.3(@langchain/core@1.2.1(openai@6.45.0(zod@4.4.3)))
+      '@langchain/langgraph-sdk': 1.9.25(@langchain/core@1.2.1(openai@6.45.0(zod@4.4.3)))
       '@langchain/protocol': 0.0.18
       '@standard-schema/spec': 1.1.0
       zod: 4.4.3
@@ -512,9 +488,19 @@ snapshots:
       - svelte
       - vue
 
-  '@langchain/protocol@0.0.18': {}
+  '@langchain/openai@1.5.3(@langchain/core@1.2.1(openai@6.45.0(zod@4.4.3)))':
+    dependencies:
+      '@langchain/core': 1.2.1(openai@6.45.0(zod@4.4.3))
+      js-tiktoken: 1.0.21
+      openai: 6.45.0(zod@4.4.3)
+      zod: 4.4.3
+    transitivePeerDependencies:
+      - '@aws-sdk/credential-provider-node'
+      - '@smithy/hash-node'
+      - '@smithy/signature-v4'
+      - ws
 
-  '@stablelib/base64@1.0.1': {}
+  '@langchain/protocol@0.0.18': {}
 
   '@standard-schema/spec@1.1.0': {}
 
@@ -559,8 +545,6 @@ snapshots:
 
   eventemitter3@5.0.4: {}
 
-  fast-sha256@1.3.0: {}
-
   fsevents@2.3.3:
     optional: true
 
@@ -570,17 +554,12 @@ snapshots:
     dependencies:
       base64-js: 1.5.1
 
-  json-schema-to-ts@3.1.1:
+  langchain@1.5.2(@langchain/core@1.2.1(openai@6.45.0(zod@4.4.3)))(openai@6.45.0(zod@4.4.3)):
     dependencies:
-      '@babel/runtime': 7.29.7
-      ts-algebra: 2.0.0
-
-  langchain@1.5.2(@langchain/core@1.2.1):
-    dependencies:
-      '@langchain/core': 1.2.1
-      '@langchain/langgraph': 1.4.7(@langchain/core@1.2.1)(zod@4.4.3)
-      '@langchain/langgraph-checkpoint': 1.1.3(@langchain/core@1.2.1)
-      langsmith: 0.7.13
+      '@langchain/core': 1.2.1(openai@6.45.0(zod@4.4.3))
+      '@langchain/langgraph': 1.4.7(@langchain/core@1.2.1(openai@6.45.0(zod@4.4.3)))(zod@4.4.3)
+      '@langchain/langgraph-checkpoint': 1.1.3(@langchain/core@1.2.1(openai@6.45.0(zod@4.4.3)))
+      langsmith: 0.7.13(openai@6.45.0(zod@4.4.3))
       zod: 4.4.3
     transitivePeerDependencies:
       - '@opentelemetry/api'
@@ -593,11 +572,17 @@ snapshots:
       - vue
       - ws
 
-  langsmith@0.7.13:
+  langsmith@0.7.13(openai@6.45.0(zod@4.4.3)):
     dependencies:
       p-queue: 6.6.2
+    optionalDependencies:
+      openai: 6.45.0(zod@4.4.3)
 
   mustache@4.2.0: {}
+
+  openai@6.45.0(zod@4.4.3):
+    optionalDependencies:
+      zod: 4.4.3
 
   p-finally@1.0.0: {}
 
@@ -620,13 +605,6 @@ snapshots:
       p-finally: 1.0.0
 
   p-timeout@7.0.1: {}
-
-  standardwebhooks@1.0.0:
-    dependencies:
-      '@stablelib/base64': 1.0.1
-      fast-sha256: 1.3.0
-
-  ts-algebra@2.0.0: {}
 
   tsx@4.22.4:
     dependencies:

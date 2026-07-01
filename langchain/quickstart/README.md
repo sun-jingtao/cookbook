@@ -9,9 +9,9 @@
 | Cursor SDK Quickstart | 本项目（LangChain） |
 | --- | --- |
 | `Agent.create({ local: { cwd } })` 自带文件/命令工具 | `createAgent({ model, tools, systemPrompt })` + 自定义只读文件工具 |
-| `model: { id: 'composer-2.5' }` | `ChatAnthropic({ model: 'claude-sonnet-4-6' })` |
+| `model: { id: 'composer-2.5' }` | `ChatOpenAI` 连接 OpenAI-compatible 中转站 |
 | Cursor 内部托管的 Agent 循环 | LangChain v1 的 `createAgent` 托管模型/工具循环 |
-| `run.stream()` 取 `assistant` 文本块 | `agent.streamEvents(..., { version: 'v3' })` 的 `stream.messages` typed projection |
+| `run.stream()` 取 `assistant` 文本块 | `agent.stream(..., { streamMode: 'messages' })` 取 AI token |
 
 与 [LangGraph 版](../../langgraph/quickstart) 的核心差异：这里使用 LangChain v1 推荐的高级
 Agent harness；LangGraph 版则显式搭建图节点和条件边。
@@ -22,7 +22,7 @@ Agent harness；LangGraph 版则显式搭建图节点和条件边。
 
 ```bash
 pnpm install
-cp .env.example .env   # 将 ANTHROPIC_API_KEY 改成你的 Anthropic API Key
+# 创建或编辑 .env，填写 OPENAI_API_KEY；必要时调整 OPENAI_BASE_URL / OPENAI_MODEL
 pnpm dev
 ```
 
@@ -30,7 +30,9 @@ pnpm dev
 
 ```bash
 cd /path/to/some/project
-ANTHROPIC_API_KEY="sk-ant-..." \
+OPENAI_API_KEY="sk-..." \
+OPENAI_BASE_URL="https://calciumion.nbops.com/v1" \
+OPENAI_MODEL="claude-sonnet-4-6" \
   /Users/luoluo/Desktop/my-github/cookbook/langchain/quickstart/node_modules/.bin/tsx \
   /Users/luoluo/Desktop/my-github/cookbook/langchain/quickstart/src/index.ts
 ```
@@ -38,7 +40,7 @@ ANTHROPIC_API_KEY="sk-ant-..." \
 ## 文件说明
 
 - `src/tools.ts` — 两个只读工具 `list_files` / `read_file`，限制在启动目录内，复刻 coding agent 的「读项目」能力。
-- `src/index.ts` — `createAgent` + `streamEvents v3`，逐 token 流式输出助手文本。
+- `src/index.ts` — `createAgent` + `streamMode: "messages"`，逐 token 流式输出助手文本。
 
 ## 说明
 

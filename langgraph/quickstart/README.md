@@ -9,7 +9,7 @@
 | Cursor SDK Quickstart | 本项目（LangGraph） |
 | --- | --- |
 | `Agent.create({ local: { cwd } })` 自带文件/命令工具 | `StateGraph` + `ToolNode` + 自定义只读文件工具 |
-| `model: { id: 'composer-2.5' }` | `ChatAnthropic({ model: 'claude-sonnet-4-6' })` |
+| `model: { id: 'composer-2.5' }` | `ChatOpenAI` 连接 OpenAI-compatible 中转站 |
 | `run.stream()` 取 `assistant` 文本块 | `graph.stream(..., { streamMode: 'messages' })` 取 AI token |
 | `run.wait()` | `for await` 流结束即等价于运行结束 |
 
@@ -23,7 +23,7 @@
 
 ```bash
 pnpm install
-cp .env.example .env   # 将 ANTHROPIC_API_KEY 改成你的 Anthropic API Key
+# 创建或编辑 .env，填写 OPENAI_API_KEY；必要时调整 OPENAI_BASE_URL / OPENAI_MODEL
 pnpm dev
 ```
 
@@ -31,7 +31,9 @@ pnpm dev
 
 ```bash
 cd /path/to/some/project
-ANTHROPIC_API_KEY="sk-ant-..." \
+OPENAI_API_KEY="sk-..." \
+OPENAI_BASE_URL="https://calciumion.nbops.com/v1" \
+OPENAI_MODEL="claude-sonnet-4-6" \
   /Users/luoluo/Desktop/my-github/cookbook/langgraph/quickstart/node_modules/.bin/tsx \
   /Users/luoluo/Desktop/my-github/cookbook/langgraph/quickstart/src/index.ts
 ```
