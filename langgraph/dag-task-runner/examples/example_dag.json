@@ -1,0 +1,41 @@
+{
+  "title": "Design a tiny CLI todo app",
+  "tasks": [
+    {
+      "id": "research-stack",
+      "depends_on": [],
+      "complexity": "LOW",
+      "subtask_prompt": "勾画一个单文件 Node.js CLI todo 应用的最小合理设计，数据存于本地 JSON 文件。列出支持的命令（add、list、done、rm）、JSON schema 和文件布局。只输出 markdown 要点，先不要写代码。"
+    },
+    {
+      "id": "research-cli-conventions",
+      "depends_on": [],
+      "complexity": "LOW",
+      "subtask_prompt": "总结一个小型 Node CLI 应遵循的约定：shebang 行、退出码、stdout 与 stderr 的使用、--help 输出形态，以及如何不依赖第三方库解析 argv。只输出 markdown 要点，先不要写代码。"
+    },
+    {
+      "id": "design",
+      "depends_on": ["research-stack", "research-cli-conventions"],
+      "complexity": "MED",
+      "subtask_prompt": "把上游的两份调研合并成一页 todo CLI 的实现计划。指明文件路径、函数签名、错误处理和 JSON 存储结构。输出一份 markdown 设计文档，仍然不要写代码。"
+    },
+    {
+      "id": "implement",
+      "depends_on": ["design"],
+      "complexity": "MED",
+      "subtask_prompt": "依据上游设计，给出 `todo.mjs` 的完整实现：单文件、无依赖、支持设计中的四个命令、持久化到 `./todos.json`。把完整代码放在一个 ```js 代码块中输出。"
+    },
+    {
+      "id": "tests",
+      "depends_on": ["implement"],
+      "complexity": "LOW",
+      "subtask_prompt": "针对上游实现的 `todo.mjs`，给出一个 `test_todo.mjs` 测试脚本，覆盖 add → list → done → rm 流程，只用 Node 的 `node:test` 与 `node:assert` 模块。把完整代码放在一个 ```js 代码块中输出。"
+    },
+    {
+      "id": "docs",
+      "depends_on": ["implement"],
+      "complexity": "LOW",
+      "subtask_prompt": "根据上游实现，写一份简短的 `README.md`：说明 `todo.mjs` 的功能、带示例的命令用法，以及数据存储位置。只输出 markdown。"
+    }
+  ]
+}
