@@ -198,6 +198,7 @@ type ProjectContextMenuState = {
 
 const SAVED_CURSOR_API_KEY = "app-builder.cursor-api-key"
 const SAVED_CHAT_STATE = "app-builder.chat-state"
+const BOOTSTRAP_CONVERSATION_ID = "bootstrap"
 const CHAT_WIDTH_DEFAULT = 400
 const GROUPED_FILE_TARGET_LIMIT = 4
 const PROJECT_NAME_TIMEOUT_MS = 15_000
@@ -220,26 +221,23 @@ const fallbackModels: ModelCatalogItem[] = [
 const fallbackModelSelection = encodeModelSelection({ id: fallbackModels[0].id })
 
 export function AppBuilder() {
-  const [initialAppState] = useState(readPersistedAppState)
   const [conversations, setConversations] = useState(
-    initialAppState.conversations
+    () => createBootstrapAppState().conversations
   )
   const [activeConversationId, setActiveConversationId] = useState(
-    initialAppState.activeConversationId
+    BOOTSTRAP_CONVERSATION_ID
   )
+  const [hasHydrated, setHasHydrated] = useState(false)
   const [apiKey, setApiKey] = useState("")
   const [hasSavedApiKey, setHasSavedApiKey] = useState(false)
   const [runtimeByConversationId, setRuntimeByConversationId] = useState<
     Record<string, ConversationRuntimeState>
-  >(() => {
-    return {
-      [initialAppState.activeConversationId]: createRuntimeState(),
-    }
-  })
+  >(() => ({
+    [BOOTSTRAP_CONVERSATION_ID]: createRuntimeState(),
+  }))
   const [isProjectSidebarOpen, setIsProjectSidebarOpen] = useState(true)
-  const [isOnboardingOpen, setIsOnboardingOpen] = useState(
-    () => !isCursorApiKey(getSavedCursorApiKey() ?? "")
-  )
+  // Keep SSR/client first paint identical; resolve from localStorage after mount.
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(true)
   const [isApiKeySettingsOpen, setIsApiKeySettingsOpen] = useState(false)
   const [isApiKeyClearConfirming, setIsApiKeyClearConfirming] = useState(false)
   const [titleGenerationConversationIds, setTitleGenerationConversationIds] =
@@ -279,10 +277,26 @@ export function AppBuilder() {
   )
 
   useEffect(() => {
+    const persisted = readPersistedAppState()
+    setConversations(persisted.conversations)
+    setActiveConversationId(persisted.activeConversationId)
+    setRuntimeByConversationId({
+      [persisted.activeConversationId]: createRuntimeState(),
+    })
+    conversationsRef.current = persisted.conversations
+    setIsOnboardingOpen(!isCursorApiKey(getSavedCursorApiKey() ?? ""))
+    setHasHydrated(true)
+  }, [])
+
+  useEffect(() => {
     conversationsRef.current = conversations
   }, [conversations])
 
   useEffect(() => {
+    if (!hasHydrated) {
+      return
+    }
+
     let cancelled = false
     const timeout = window.setTimeout(async () => {
       if (cancelled) {
@@ -405,13 +419,17 @@ export function AppBuilder() {
     // The restore pass is keyed only by active conversation; helper functions
     // intentionally read the latest state through refs inside the effect.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeConversationId])
+  }, [hasHydrated, activeConversationId])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
   }, [activeConversation.id, messages])
 
   useEffect(() => {
+    if (!hasHydrated) {
+      return
+    }
+
     writePersistedAppState({
       version: 2,
       activeConversationId,
@@ -420,7 +438,7 @@ export function AppBuilder() {
         messages: compactActivityMessages(conversation.messages),
       })),
     })
-  }, [activeConversationId, conversations])
+  }, [hasHydrated, activeConversationId, conversations])
 
   useEffect(() => {
     for (const conversation of conversations) {
@@ -1818,6 +1836,10 @@ function formatStatusActivity(status: string, message: string | undefined) {
 
   if (normalizedStatus === "RUNNING" || normalizedStatus === "FINISHED") {
     return null
+  }
+
+  if (normalizedStatus === "ERROR") {
+    return formatStatusText(message) ?? "Agent run failed"
   }
 
   return formatStatusText(message ?? status)
@@ -4029,7 +4051,7 @@ function getProjectNameMessages(conversation: Conversation): ProjectNameMessage[
 
 function readPersistedAppState(): PersistedAppState {
   if (typeof window === "undefined") {
-    return createInitialAppState()
+    return createBootstrapAppState()
   }
 
   try {
@@ -4048,6 +4070,25 @@ function readPersistedAppState(): PersistedAppState {
   }
 
   return createInitialAppState()
+}
+
+function createBootstrapAppState(): PersistedAppState {
+  return {
+    version: 2,
+    activeConversationId: BOOTSTRAP_CONVERSATION_ID,
+    conversations: [
+      {
+        id: BOOTSTRAP_CONVERSATION_ID,
+        title: "Project 1",
+        createdAt: 0,
+        updatedAt: 0,
+        messages: [],
+        input: "",
+        model: fallbackModelSelection,
+        session: null,
+      },
+    ],
+  }
 }
 
 function createInitialAppState(): PersistedAppState {

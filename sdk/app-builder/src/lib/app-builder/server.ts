@@ -238,7 +238,11 @@ export async function restoreSession(
   sessionId: string,
   apiKey: string
 ): Promise<PublicSession> {
-  const session = sessions.get(sessionId)
+  let session = sessions.get(sessionId)
+
+  if (!session) {
+    session = await rehydrateSessionFromDisk(sessionId, apiKey)
+  }
 
   if (!session) {
     throw new UnknownAppBuilderSessionError()
@@ -256,7 +260,19 @@ export async function restoreSession(
 }
 
 export async function getPublicSession(id: string): Promise<PublicSession> {
-  const session = getSession(id)
+  let session = sessions.get(id)
+
+  if (!session) {
+    const apiKey = await readPersistedCursorApiKey()
+    if (apiKey) {
+      session = await rehydrateSessionFromDisk(id, apiKey)
+    }
+  }
+
+  if (!session) {
+    throw new UnknownAppBuilderSessionError()
+  }
+
   await session.ready
   assertSessionReady(session)
   return toPublicSession(session)
@@ -268,7 +284,7 @@ export async function streamAgentResponse(
   model: string | undefined,
   emit: (event: AgentStreamEvent) => void
 ) {
-  const session = getSession(sessionId)
+  const session = await ensureSession(sessionId)
   await session.ready
   assertSessionReady(session)
 
@@ -285,14 +301,20 @@ export async function streamAgentResponse(
     emitSdkMessage(event, emit)
   }
 
-  await run.wait()
+  const result = await run.wait()
+  if (result.status === "error") {
+    const modelId = result.model?.id ?? modelSelection?.id ?? "unknown"
+    throw new Error(
+      `Agent run failed for model "${modelId}". Local runtime rejected this selection.`
+    )
+  }
 }
 
 export async function generateProjectName(
   sessionId: string,
   context: string | ProjectNameContext
 ): Promise<string> {
-  const session = getSession(sessionId)
+  const session = await ensureSession(sessionId)
   return generateProjectNameForApiKey(session.apiKey, context)
 }
 
@@ -425,6 +447,79 @@ function getSession(id: string) {
   if (!session) {
     throw new UnknownAppBuilderSessionError()
   }
+  return session
+}
+
+async function ensureSession(id: string) {
+  const existing = sessions.get(id)
+  if (existing) {
+    return existing
+  }
+
+  const apiKey = await readPersistedCursorApiKey()
+  if (!apiKey) {
+    throw new UnknownAppBuilderSessionError()
+  }
+
+  const rehydrated = await rehydrateSessionFromDisk(id, apiKey)
+  if (!rehydrated) {
+    throw new UnknownAppBuilderSessionError()
+  }
+
+  return rehydrated
+}
+
+async function rehydrateSessionFromDisk(
+  sessionId: string,
+  apiKey: string
+): Promise<BuilderSession | null> {
+  const projectPath = path.join(workspaceRoot, sessionId, "app")
+
+  try {
+    await fs.access(path.join(projectPath, "package.json"))
+  } catch {
+    return null
+  }
+
+  const port = await getAvailablePort()
+  const session: BuilderSession = {
+    id: sessionId,
+    apiKey,
+    models: fallbackModels,
+    user: null,
+    projectPath,
+    port,
+    previewUrl: `http://127.0.0.1:${port}`,
+    logs: [],
+    ready: Promise.resolve(),
+  }
+
+  sessions.set(sessionId, session)
+
+  const readyPromise = (async () => {
+    try {
+      await fs.access(path.join(projectPath, "node_modules"))
+    } catch {
+      await runCommand("pnpm", ["install"], session)
+    }
+    await startDevServer(session)
+  })().catch((error: unknown) => {
+    const message = getErrorMessage(error)
+    session.setupError = message
+    session.logs.push(`[rehydrate] ${message}`)
+    throw error
+  })
+
+  session.ready = readyPromise
+
+  const [models, user] = await Promise.all([
+    listModels(apiKey),
+    getCurrentUser(apiKey),
+    readyPromise,
+  ])
+  session.models = models
+  session.user = user
+
   return session
 }
 
@@ -598,11 +693,24 @@ function firstString(
 async function listModels(apiKey: string): Promise<ModelCatalogItem[]> {
   try {
     const models = await Cursor.models.list({ apiKey })
-    const catalog = sanitizeModelCatalog(models.map(modelToCatalogItem))
+    const catalog = sanitizeModelCatalog(
+      models.map(modelToCatalogItem).filter(isLocallySelectableModel)
+    )
     return catalog.length > 0 ? catalog : fallbackModels
   } catch {
     return fallbackModels
   }
+}
+
+// Confirmed unavailable on local runtime after id/remap probing. Keep them out of
+// the picker so the list only shows models that can actually run.
+const LOCAL_UNAVAILABLE_MODEL_IDS = new Set([
+  "claude-fable-5",
+  "claude-opus-4-5",
+])
+
+function isLocallySelectableModel(model: ModelCatalogItem) {
+  return !LOCAL_UNAVAILABLE_MODEL_IDS.has(model.id)
 }
 
 function modelToCatalogItem(model: SDKModel): ModelCatalogItem {
@@ -700,65 +808,141 @@ function encodeLocalSdkModelSelection(
   selection: ModelSelection,
   models: ModelCatalogItem[]
 ): ModelSelection {
-  if (!selection.params?.length && isEncodedLocalModelId(selection.id)) {
+  // Local SDK throws if ModelSelection.params is present. Collapse variants
+  // into a parameterless local model id instead.
+  const catalogIds = new Set(models.map((model) => model.id))
+  if (!selection.params?.length && !catalogIds.has(selection.id)) {
     return { id: selection.id }
   }
 
   const model = models.find((item) => item.id === selection.id)
-  const config = getSelectedModelConfig(selection, model)
-  const modelKey = normalizeModelToken(
-    `${selection.id} ${model?.label ?? ""}`
-  )
-  const encodedId =
-    encodeKnownLocalModelId(modelKey, selection.id, config) ?? selection.id
+  const effectiveSelection: ModelSelection = {
+    id: selection.id,
+    params: selection.params?.length ? selection.params : model?.defaultParams,
+  }
+  const config = getSelectedModelConfig(effectiveSelection, model)
 
-  // Local runtime expects variant configuration encoded into the model id.
-  return { id: encodedId }
+  return { id: encodeLocalModelId(selection.id, model, config) }
 }
 
-function isEncodedLocalModelId(id: string) {
-  return (
-    /^gpt-5\.4-(none|low|medium|high|xhigh)(-fast)?$/.test(id) ||
-    /^gpt-5\.3-codex(-(low|high|xhigh))?(-fast)?$/.test(id) ||
-    /^claude-4\.6-sonnet-(medium|high)(-thinking)?$/.test(id) ||
-    /^claude-4\.6-opus-(high|max)(-thinking)?(-fast)?$/.test(id)
-  )
-}
-
-function encodeKnownLocalModelId(
-  modelKey: string,
-  fallbackId: string,
+function encodeLocalModelId(
+  catalogId: string,
+  model: ModelCatalogItem | undefined,
   config: SelectedModelConfig
 ) {
-  if (modelKey.includes("gpt54") || modelKey.includes("gpt5.4")) {
-    const effort = config.effort ?? "medium"
-    const supportsFast = ["medium", "high", "xhigh"].includes(effort)
-    return `gpt-5.4-${effort}${config.fast && supportsFast ? "-fast" : ""}`
+  const remapped = encodeLegacyLocalModelId(catalogId, config)
+  if (remapped) {
+    return remapped
   }
 
-  if (modelKey.includes("gpt53codex") || modelKey.includes("gpt5.3codex")) {
-    const effort = config.effort ?? "medium"
-    const effortSuffix = effort === "medium" ? "" : `-${effort}`
-    const supportsFast = ["medium", "high", "xhigh"].includes(effort)
-    return `gpt-5.3-codex${effortSuffix}${
-      config.fast && supportsFast ? "-fast" : ""
-    }`
+  if (usesBareLocalModelId(catalogId, model)) {
+    return catalogId
   }
 
-  if (modelKey.includes("claude46sonnet") || modelKey.includes("claude4.6sonnet")) {
-    const effort = config.effort === "high" ? "high" : "medium"
-    return `claude-4.6-sonnet-${effort}${config.thinking ? "-thinking" : ""}`
+  const effort = config.effort ?? getDefaultEffort(model)
+  if (!effort || effort === "none") {
+    return catalogId
   }
 
-  if (modelKey.includes("claude46opus") || modelKey.includes("claude4.6opus")) {
-    const effort = config.effort === "max" ? "max" : "high"
-    const supportsVariants = effort === "high"
-    return `claude-4.6-opus-${effort}${
-      config.thinking && supportsVariants ? "-thinking" : ""
-    }${config.fast && supportsVariants ? "-fast" : ""}`
+  const fast =
+    config.fast && supportsFastLocalSuffix(catalogId, effort)
+  // ponytail: local ids accept effort/reasoning (+ optional -fast). -thinking
+  // only works on the legacy claude-4.6-* remaps above; appending it to newer
+  // catalog ids (opus-4-8, sonnet-5, …) makes the local runtime ERROR.
+  return `${catalogId}-${effort}${fast ? "-fast" : ""}`
+}
+
+function encodeLegacyLocalModelId(
+  catalogId: string,
+  config: SelectedModelConfig
+) {
+  switch (catalogId) {
+    case "gpt-5.4": {
+      const effort = config.effort ?? "medium"
+      const supportsFast = ["medium", "high", "xhigh"].includes(effort)
+      return `gpt-5.4-${effort}${config.fast && supportsFast ? "-fast" : ""}`
+    }
+    case "gpt-5.3-codex": {
+      const effort = config.effort ?? "medium"
+      const effortSuffix = effort === "medium" ? "" : `-${effort}`
+      const supportsFast = ["medium", "high", "xhigh"].includes(effort)
+      return `gpt-5.3-codex${effortSuffix}${
+        config.fast && supportsFast ? "-fast" : ""
+      }`
+    }
+    case "gpt-5.1":
+    case "gpt-5.1-codex-mini": {
+      // Local rejects `gpt-5.1-medium`; bare id is the medium default.
+      const effort = config.effort ?? "medium"
+      if (!effort || effort === "none" || effort === "medium") {
+        return catalogId
+      }
+      return `${catalogId}-${effort}`
+    }
+    case "claude-sonnet-4-6": {
+      const effort = config.effort === "high" ? "high" : "medium"
+      return `claude-4.6-sonnet-${effort}${config.thinking ? "-thinking" : ""}`
+    }
+    case "claude-opus-4-6": {
+      const effort = config.effort === "max" ? "max" : "high"
+      const supportsVariants = effort === "high"
+      return `claude-4.6-opus-${effort}${
+        config.thinking && supportsVariants ? "-thinking" : ""
+      }${config.fast && supportsVariants ? "-fast" : ""}`
+    }
+    case "claude-sonnet-4-5":
+      return `claude-4.5-sonnet${config.thinking ? "-thinking" : ""}`
+    case "claude-haiku-4-5":
+      return `claude-4.5-haiku${config.thinking ? "-thinking" : ""}`
+    case "claude-sonnet-4":
+      return `claude-4-sonnet${config.thinking ? "-thinking" : ""}`
+    default:
+      return null
+  }
+}
+
+function usesBareLocalModelId(
+  catalogId: string,
+  model: ModelCatalogItem | undefined
+) {
+  if (catalogId === "default" || catalogId === "auto") {
+    return true
   }
 
-  return fallbackId
+  if (catalogId.startsWith("composer-")) {
+    return true
+  }
+
+  // These families reject effort suffixes on local (`id-high` → ERROR).
+  if (catalogId.startsWith("gemini-") || catalogId.startsWith("kimi-")) {
+    return true
+  }
+
+  return !model?.parameters.some(
+    (parameter) => parameter.id === "effort" || parameter.id === "reasoning"
+  )
+}
+
+function supportsFastLocalSuffix(catalogId: string, effort: string) {
+  // grok accepts `grok-4.5-high` but rejects `grok-4.5-high-fast`.
+  if (catalogId.startsWith("grok-")) {
+    return false
+  }
+
+  return ["medium", "high", "xhigh", "max"].includes(effort)
+}
+
+function getDefaultEffort(
+  model: ModelCatalogItem | undefined
+): SelectedModelConfig["effort"] {
+  const effortParam = model?.defaultParams.find(
+    (param) => param.id === "effort" || param.id === "reasoning"
+  )
+  if (!effortParam) {
+    return undefined
+  }
+
+  return getEffortValue(normalizeModelToken(effortParam.value))
 }
 
 type SelectedModelConfig = {

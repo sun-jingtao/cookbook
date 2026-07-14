@@ -51,8 +51,16 @@ export async function POST(request: Request) {
     }
 
     if (sessionId) {
-      const session = await restoreSession(sessionId, apiKey)
-      return Response.json(session)
+      try {
+        const session = await restoreSession(sessionId, apiKey)
+        return Response.json(session)
+      } catch (error) {
+        if (!(error instanceof UnknownAppBuilderSessionError)) {
+          throw error
+        }
+        // Stale client id after server restart with no workspace on disk —
+        // create a fresh session instead of leaving the UI stuck.
+      }
     }
 
     const session = await createSession(apiKey)
